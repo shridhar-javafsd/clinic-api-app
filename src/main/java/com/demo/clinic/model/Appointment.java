@@ -1,9 +1,19 @@
 package com.demo.clinic.model;
 
+import com.demo.clinic.model.enums.AppointmentStatus;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
 
 @Entity
-@Table(name = "appointments")
+@Table(name = "appointments",
+    uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"doctor_id", "appointment_date", "slot"},
+            name = "uk_doctor_date_slot")
+    }
+)
 public class Appointment {
 
     @Id
@@ -11,54 +21,79 @@ public class Appointment {
     @Column(name = "appointment_id")
     private Long appointmentId;
 
-    @Column(name = "doctor_id", nullable = false)
-    private Long doctorId;
+    @NotNull(message = "Doctor is required")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "doctor_id", nullable = false,
+        foreignKey = @ForeignKey(name = "fk_appointment_doctor"))
+    private Doctor doctor;
 
-    @Column(name = "patient_id", nullable = false)
-    private Long patientId;
+    @NotNull(message = "Patient is required")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "patient_id", nullable = false,
+        foreignKey = @ForeignKey(name = "fk_appointment_patient"))
+    private Patient patient;
 
+    @NotNull(message = "Appointment date is required")
+    @FutureOrPresent(message = "Appointment date cannot be in the past")
     @Column(name = "appointment_date", nullable = false)
-    private String date;
+    private LocalDate appointmentDate;
 
+    @NotNull(message = "Slot time is required")
     @Column(name = "slot", nullable = false)
-    private String slot;
+    private LocalTime slot;
 
+    @NotBlank(message = "Reason for visit is required")
+    @Column(name = "reason", nullable = false)
+    private String reason;
+
+    @NotNull(message = "Status is required")
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private String status;
+    private AppointmentStatus status = AppointmentStatus.SCHEDULED;
+
+    @Column(name = "notes")
+    private String notes;
 
     public Appointment() {}
 
-    public Appointment(Long appointmentId, Long doctorId, Long patientId,
-                       String date, String slot, String status) {
-        this.appointmentId = appointmentId;
-        this.doctorId = doctorId;
-        this.patientId = patientId;
-        this.date = date;
+    public Appointment(Doctor doctor, Patient patient, LocalDate appointmentDate,
+                       LocalTime slot, String reason) {
+        this.doctor = doctor;
+        this.patient = patient;
+        this.appointmentDate = appointmentDate;
         this.slot = slot;
-        this.status = status;
+        this.reason = reason;
+        this.status = AppointmentStatus.SCHEDULED;
     }
 
     public Long getAppointmentId() { return appointmentId; }
     public void setAppointmentId(Long appointmentId) { this.appointmentId = appointmentId; }
 
-    public Long getDoctorId() { return doctorId; }
-    public void setDoctorId(Long doctorId) { this.doctorId = doctorId; }
+    public Doctor getDoctor() { return doctor; }
+    public void setDoctor(Doctor doctor) { this.doctor = doctor; }
 
-    public Long getPatientId() { return patientId; }
-    public void setPatientId(Long patientId) { this.patientId = patientId; }
+    public Patient getPatient() { return patient; }
+    public void setPatient(Patient patient) { this.patient = patient; }
 
-    public String getDate() { return date; }
-    public void setDate(String date) { this.date = date; }
+    public LocalDate getAppointmentDate() { return appointmentDate; }
+    public void setAppointmentDate(LocalDate appointmentDate) { this.appointmentDate = appointmentDate; }
 
-    public String getSlot() { return slot; }
-    public void setSlot(String slot) { this.slot = slot; }
+    public LocalTime getSlot() { return slot; }
+    public void setSlot(LocalTime slot) { this.slot = slot; }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public String getReason() { return reason; }
+    public void setReason(String reason) { this.reason = reason; }
+
+    public AppointmentStatus getStatus() { return status; }
+    public void setStatus(AppointmentStatus status) { this.status = status; }
+
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
 
     @Override
     public String toString() {
-        return "Appointment [appointmentId=" + appointmentId + ", doctorId=" + doctorId
-                + ", patientId=" + patientId + ", date=" + date + ", slot=" + slot + ", status=" + status + "]";
+        return "Appointment [id=" + appointmentId + ", doctor=" + (doctor != null ? doctor.getName() : null)
+                + ", patient=" + (patient != null ? patient.getName() : null)
+                + ", date=" + appointmentDate + ", slot=" + slot + ", status=" + status + "]";
     }
 }

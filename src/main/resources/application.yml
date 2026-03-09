@@ -1,15 +1,21 @@
 server:
-  port: 9090
+  port: 9999
 
-spring:
-  application:
+  spring:
+    profiles:
+      active: prod  # dev
     name: clinic-api
 
   datasource:
-    url: jdbc:mysql://localhost:3306/clinic_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-    username: root
-    password: root
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/clinic_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
 
   jpa:
     hibernate:
@@ -19,12 +25,14 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
+    open-in-view: false   # Avoid lazy loading issues in controllers
 
+# Actuator & Prometheus
 management:
   endpoints:
     web:
       exposure:
-        include: health, info, prometheus, metrics, env, loggers
+        include: health, info, prometheus, metrics, env, loggers, beans
   endpoint:
     prometheus:
       enabled: true
@@ -33,14 +41,24 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true   # Enable histograms for request latency (used by Grafana heatmaps)
+      slo:
+        http.server.requests: 100ms, 250ms, 500ms, 1s, 2s  # SLO buckets visible in Prometheus
 
+# Swagger / OpenAPI
 springdoc:
   api-docs:
     path: /api-docs
   swagger-ui:
     path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
 
+# Logging
 logging:
   level:
     com.demo.clinic: DEBUG
     org.springframework.web: INFO
+    org.hibernate.SQL: WARN

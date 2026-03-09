@@ -1,0 +1,51 @@
+services:
+
+  mysql-db:
+    image: mysql:8.0
+    container_name: clinic-mysql
+
+    environment:
+      MYSQL_ROOT_PASSWORD: root_pass
+      MYSQL_DATABASE: clinic_db
+      MYSQL_USER: clinic_user
+      MYSQL_PASSWORD: clinic_pass
+
+    ports:
+      - "3306:3306"
+
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_pass"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+
+  clinic-api:
+    build: .
+    container_name: clinic-api
+
+    ports:
+      - "9999:9999"
+
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/clinic_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=clinic_user
+      - SPRING_DATASOURCE_PASSWORD=clinic_pass
+
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+
+    ports:
+      - "9090:9090"
+
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
+    depends_on:
+      - clinic-api
